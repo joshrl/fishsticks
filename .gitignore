@@ -1,0 +1,6 @@
+.DS_Store
+venv
+*.pyc
+artifacts
+checkout
+dump.rdb
