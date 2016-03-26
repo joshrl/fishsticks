@@ -11,13 +11,13 @@ Fishsticks is currently in development and not really ready for primetime, but c
 
 # Goals
 
-+ [] One line installation
-+ [] Run jobs on-demand with a single curl command with < 5 configuration parameters.
-+ [] Flip a switch to schedule jobs to happen on commit.
-+ [] Fully traceable output and artifacts
-+ [] Special attention to make things run smoothly on OSX and for the sticky task of doing CI/CD for iOS and Android mobile projects.  
-+ [] A nice set of ~20-30 recipes that handle many common CI tasks for a couple of common platforms
-+ [] Pluggable architecture for doing all the other stuff
+- [ ] One line installation
+- [ ] Run jobs on-demand with a single curl command with < 5 configuration parameters.
+- [ ] Flip a switch to schedule jobs to happen on commit.
+- [ ] Fully traceable output and artifacts
+- [ ] Special attention to make things run smoothly on OSX and for the sticky task of doing CI/CD for iOS and Android mobile projects.  
+- [ ] A nice set of ~20-30 recipes that handle many common CI tasks for a couple of common platforms
+- [ ] Pluggable architecture for doing all the other stuff
 
 
 # Hacking Notes
