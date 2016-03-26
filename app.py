@@ -27,10 +27,10 @@ def create_or_update_job(data):
     branch = data.get("branch", "master")
     url = data.get("url")
     path = data.get("dir",".")
-    script = data.get("script","ios")
+    recipe = data.get("recipe","ios")
     
     job = q.enqueue_call(
-        func="job.start_job", args=(name, url, branch, path, script), result_ttl=5000
+        func="job.start_job", args=(name, url, branch, path, recipe), result_ttl=5000
     )
             
     result = {'id':job.get_id(), 'name':name}

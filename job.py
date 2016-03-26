@@ -2,8 +2,9 @@ import redis
 import git
 import os
 import subprocess
+from werkzeug.utils import secure_filename
 
-local_scripts_dir = os.getenv('SCRIPTS_HOME', './scripts')
+local_recipes_dir = os.getenv('RECIPES_HOME', './recipes')
 local_checkout_dir = os.getenv('CHECKOUT_HOME', './checkout')
 local_artifacts_dir = os.getenv('ARTIFACTS_HOME', './artifacts')
 
@@ -14,22 +15,26 @@ def wrap_console(fn):
        console = lambda msg: r.publish(channel, msg)
        kwargs['console'] = console
        try:
-           result = fn(*args, **kwargs)
+           fn(*args, **kwargs)
+       except Exception as e:
+            console("Failed: " + str(e))
        finally:
            console("EOF")
-       return result
+       return
     
     return new_fn
 
 @wrap_console
-def start_job(name, url, branch_name, path, script, console=None):
+def start_job(name, url, branch_name, path, recipe, console=None):
     
     console("Starting job %s..." % name)
-        
-    script = os.path.abspath(local_scripts_dir) + "/"+ script + "/run.sh"
-    if not os.path.exists(script):
-        console("Script doesn't exist: " + script)
-        raise
+    
+    #sanitize recipe...
+    recipe_path = recipe.replace("..", "_")
+    
+    recipe = os.path.abspath(local_recipes_dir) + "/"+ recipe_path + "/run.sh"
+    if not os.path.exists(recipe):
+        raise Exception("Recipe doesn't exist: " + recipe)
     
     if not os.path.exists(local_checkout_dir):
         os.makedirs(local_checkout_dir)
@@ -59,9 +64,9 @@ def start_job(name, url, branch_name, path, script, console=None):
     branch.checkout()
     origin.pull()
     
-    script = script + " " + os.path.abspath(checkout_dir) + " " + os.path.abspath(output_dir)
-    console("Starting: " + script)
-    process = subprocess.Popen(script, shell=True, stdout=subprocess.PIPE)
+    recipe = recipe + " " + os.path.abspath(checkout_dir) + " " + os.path.abspath(output_dir)
+    console("Starting: " + recipe)
+    process = subprocess.Popen(recipe, shell=True, stdout=subprocess.PIPE)
     for line in iter(process.stdout.readline, ''):
        console(line.rstrip())
     

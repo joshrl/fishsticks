@@ -6,6 +6,16 @@ function die
 	exit 1
 }
 
+# Check status of previous piped command
+function checkstatus_of_pipe
+{
+    if [ ${PIPESTATUS[$1]} -ne 0 ] 
+    then
+    	echo "$2" 1>&2
+    	exit ${PIPESTATUS[0]}
+    fi
+}
+
 if [ -z "$1" ] || [ -z "$2" ]
   then
     die "Usage: $0 [project-path] [artifact-path]"
