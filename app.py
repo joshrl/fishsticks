@@ -23,17 +23,16 @@ q = Queue(connection=conn)
 
 def create_or_update_job(data):
     
-    name = data.get("name", uuid.uuid4())
+    name = data.get("name", str(uuid.uuid4()))
     branch = data.get("branch", "master")
     url = data.get("url")
-    path = data.get("dir",".")
-    recipe = data.get("recipe","ios")
+    recipes = data.get("recipes",[])
     
     job = q.enqueue_call(
-        func="job.start_job", args=(name, url, branch, path, recipe), result_ttl=5000
+        func="job.start_job", args=(name, url, branch, recipes), result_ttl=5000
     )
             
-    result = {'id':job.get_id(), 'name':name}
+    result = {'job_id':job.get_id(), 'name':name}
     return result
 
 
@@ -63,10 +62,9 @@ def console(name):
             yield str(item['data'])
     return Response(generate(), mimetype='text/plain')
 
-
-
 if __name__ == '__main__':
+    # use gevent allows "console" to run async
     gevent_server = gevent.pywsgi.WSGIServer(('', 5000), app)
-    gevent_server.serve_forever()  # instead of flask_app.run()
+    gevent_server.serve_forever()
 
 

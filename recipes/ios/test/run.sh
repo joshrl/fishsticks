@@ -6,16 +6,6 @@ function die
 	exit 1
 }
 
-# Check status of previous piped command
-function checkstatus_of_pipe
-{
-    if [ ${PIPESTATUS[$1]} -ne 0 ] 
-    then
-    	echo "$2" 1>&2
-    	exit ${PIPESTATUS[0]}
-    fi
-}
-
 if [ -z "$1" ] || [ -z "$2" ]
   then
     die "Usage: $0 [project-path] [artifact-path]"
@@ -45,8 +35,8 @@ workspace=${workspaces[0]}
 projest_name=${workspace%.*}
 scheme=${projest_name}
 workspace_path="${project_path}/${workspace}"
-test_output_path="${artifact_path}/test-output.txt"
-test_report_path="${artifact_path}/test-report.html"
+test_output_path="${artifact_path}/test_output.txt"
+test_report_path="${artifact_path}/test_report.json"
 
 echo "Settings:"
 echo "  workspace: $workspace"
@@ -62,16 +52,13 @@ xcodebuild test \
     -destination 'platform=iOS Simulator,name=iPhone 6s,OS=9.2' \
     | tee "$test_output_path"
 
-checkstatus_of_pipe 0 "Tests Failed"
+result=${PIPESTATUS[$1]}
 
 # If xcpretty is installed, generate report
 if hash xcpretty 2>/dev/null; then
-   cat "$test_output_path" | xcpretty -r html --output ${test_report_path}
+   cat "$test_output_path" | xcpretty -r json-compilation-database --output ${test_report_path}
 else
     echo "Test Report Unavailable." > ${test_report_path}
 fi
 
-
-
-
-
+exit result

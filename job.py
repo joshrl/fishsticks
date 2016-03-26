@@ -2,11 +2,7 @@ import redis
 import git
 import os
 import subprocess
-from werkzeug.utils import secure_filename
-
-local_recipes_dir = os.getenv('RECIPES_HOME', './recipes')
-local_checkout_dir = os.getenv('CHECKOUT_HOME', './checkout')
-local_artifacts_dir = os.getenv('ARTIFACTS_HOME', './artifacts')
+import config
 
 def wrap_console(fn):
     def new_fn(*args, **kwargs):
@@ -25,25 +21,19 @@ def wrap_console(fn):
     return new_fn
 
 @wrap_console
-def start_job(name, url, branch_name, path, recipe, console=None):
+def start_job(name, url, branch_name, recipes, console=None):
     
     console("Starting job %s..." % name)
     
-    #sanitize recipe...
-    recipe_path = recipe.replace("..", "_")
+    # make checkout base dir if it doesn't exist.
+    if not os.path.exists(config.checkout_base_dir):
+        os.makedirs(config.checkout_base_dir)
     
-    recipe = os.path.abspath(local_recipes_dir) + "/"+ recipe_path + "/run.sh"
-    if not os.path.exists(recipe):
-        raise Exception("Recipe doesn't exist: " + recipe)
+    artifacts_dir = os.path.join(config.artifacts_base_dir, name)
+    if not os.path.exists(artifacts_dir):
+        os.makedirs(artifacts_dir)
     
-    if not os.path.exists(local_checkout_dir):
-        os.makedirs(local_checkout_dir)
-    
-    output_dir = os.path.join(local_artifacts_dir, name)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
-    checkout_dir = os.path.join(local_checkout_dir, name)
+    checkout_dir = os.path.join(config.checkout_base_dir, name)
     
     try:
         repo = git.Repo(checkout_dir)
@@ -64,11 +54,20 @@ def start_job(name, url, branch_name, path, recipe, console=None):
     branch.checkout()
     origin.pull()
     
-    recipe = recipe + " " + os.path.abspath(checkout_dir) + " " + os.path.abspath(output_dir)
-    console("Starting: " + recipe)
-    process = subprocess.Popen(recipe, shell=True, stdout=subprocess.PIPE)
-    for line in iter(process.stdout.readline, ''):
-       console(line.rstrip())
+    for recipe in recipes:
+    
+        #sanitize recipe
+        recipe_sanitized = recipe.replace("..", "").replace("~", "")
+    
+        recipe_path = os.path.abspath(config.recipes_base_dir) + "/"+ recipe_sanitized + "/run.sh"
+        if not os.path.exists(recipe_path):
+            raise Exception("Recipe doesn't exist: " + recipe)
+        
+        recipe_with_args = recipe_path + " " + os.path.abspath(checkout_dir) + " " + os.path.abspath(artifacts_dir)
+        console("Starting: " + recipe)
+        process = subprocess.Popen(recipe_with_args, shell=True, stdout=subprocess.PIPE)
+        for line in iter(process.stdout.readline, ''):
+           console(line.rstrip())
     
 
 
