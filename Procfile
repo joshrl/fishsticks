@@ -1,3 +1,3 @@
 redis: redis-server
-web: python app.py
+web: PYTHONUNBUFFERED=true python app.py
 worker: python worker.py

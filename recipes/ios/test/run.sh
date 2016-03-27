@@ -52,7 +52,7 @@ xcodebuild test \
     -destination 'platform=iOS Simulator,name=iPhone 6s,OS=9.2' \
     | tee "$test_output_path"
 
-result=${PIPESTATUS[$1]}
+result=${PIPESTATUS[0]}
 
 # If xcpretty is installed, generate report
 if hash xcpretty 2>/dev/null; then
@@ -61,4 +61,4 @@ else
     echo "Test Report Unavailable." > ${test_report_path}
 fi
 
-exit result
+exit $result

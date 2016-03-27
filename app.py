@@ -1,14 +1,15 @@
-from flask import Flask, request, url_for, Response, json, jsonify
+from flask import Flask, request, url_for, Response, json, jsonify, render_template
 from rq import Queue
 from rq.job import Job
 from worker import conn
 import operator
 import redis
 import uuid
-import gevent.pywsgi
-import gevent.monkey
+from flask.ext.socketio import SocketIO, emit
+from flask_socketio import join_room, leave_room
+import eventlet
 
-gevent.monkey.patch_all()
+eventlet.monkey_patch()
 
 #################
 # configuration #
@@ -16,6 +17,7 @@ gevent.monkey.patch_all()
 
 app = Flask(__name__)
 q = Queue(connection=conn)
+socketio = SocketIO(app)
 
 #################
 # helper #
@@ -35,36 +37,50 @@ def create_or_update_job(data):
     result = {'job_id':job.get_id(), 'name':name}
     return result
 
-
 ##########
 # routes #
 ##########
 
 @app.route('/', methods=['GET', 'POST'])
-def job_list_or_create():
+def root():
     if request.method == 'POST':
         resp = jsonify(create_or_update_job(request.json))
         resp.status_code = 201
         return resp
     return ""
-    
+
 @app.route('/console/<name>', methods=['GET'])
 def console(name):
-    def generate():
-        r = redis.Redis()
-        pubsub = r.pubsub()
-        pubsub.subscribe("%s.console" % name)
-        for item in pubsub.listen():
-            if item['data'] == "EOF":
-                pubsub.unsubscribe()
-                yield "Job Finished"
-                break
-            yield str(item['data'])
-    return Response(generate(), mimetype='text/plain')
+    return render_template('console.html')
+
+@socketio.on('subscribe', namespace='/console')
+def console_subscribe(job):   
+    channel = job['name'] + '.console'
+    join_room(channel)
+    emit('log', {'message': 'Subscribed to channel: ' + channel})
+
+@socketio.on('connect', namespace='/console')
+def console_connect():
+    request.namespace
+    emit('log', {'message': 'Connected'})
+
+@socketio.on('disconnect', namespace='/console')
+def console_disconnect():
+    print('Client disconnected')
+
+# Long running task that subscribes to all console messages
+def console_listener():    
+    r = redis.Redis()
+    pubsub = r.pubsub()
+    pubsub.psubscribe("*.console")
+    for item in pubsub.listen():
+        channel = item["channel"]
+        log_item = str(item["data"])
+        socketio.emit('log', {'message': log_item}, namespace='/console', room=channel)
+        print "%s: %s" % (channel, log_item)
 
 if __name__ == '__main__':
-    # use gevent allows "console" to run async
-    gevent_server = gevent.pywsgi.WSGIServer(('', 5000), app)
-    gevent_server.serve_forever()
+    eventlet.spawn_n(console_listener)
+    socketio.run(app)
 
 
